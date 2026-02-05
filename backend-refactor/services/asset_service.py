@@ -1,22 +1,26 @@
-"""Asset service layer."""
-from typing import List, Dict
-from db.asset_db import get_assets, fetch_assets
-from utils.asset_helper import format_asset_response, transform_asset
-from utils.helpers import validate_data
+"""Asset service."""
+
+import logging
+from typing import List
+
+from core.exceptions import NotFoundError
+from db.asset_db import get_assets
+from schemas.asset_schema import AssetResponse
+from utils.asset_helper import format_asset_response
+
+logger = logging.getLogger(__name__)
+
 
 class AssetService:
     """Service for managing assets."""
-    
-    def get_all_assets(self) -> List[Dict]:
+
+    def get_all_assets(self) -> List[AssetResponse]:
         """Get all assets with their signals."""
+        logger.info("Fetching all assets")
         assets = get_assets()
-        return [format_asset_response(asset) for asset in assets]
-    
-    def fetch_asset(self) -> List[Dict]:
-        data = fetch_assets()
-        return [transform_asset(a) for a in data]
-    
-    def post_asset(self) -> List[Dict]:
-        """Placeholder for posting an asset."""
-        # Implementation would go here
-        return []
+        if not assets:
+            logger.warning("No assets found")
+            raise NotFoundError("No assets found")
+        response = [AssetResponse(**format_asset_response(asset)) for asset in assets]
+        logger.info("Fetched %d assets", len(response))
+        return response

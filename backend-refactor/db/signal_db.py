@@ -1,25 +1,34 @@
 """Database operations for signals."""
+
 import json
-from typing import List, Dict, Optional
+from functools import lru_cache
+from typing import Dict, List
+
 from core.config import get_settings
 
+
+def _normalize_signal(raw: Dict) -> Dict:
+    """Normalize signal keys to snake_case."""
+    return {
+        "signal_gid": raw.get("SignalGId"),
+        "signal_id": raw.get("SignalId"),
+        "signal_name": raw.get("SignalName"),
+        "asset_id": raw.get("AssetId"),
+        "unit": raw.get("Unit"),
+    }
+
+
+@lru_cache()
 def load_signals() -> List[Dict]:
     """Load signals from JSON file."""
     settings = get_settings()
-    with open(settings.data_path, 'r') as f:
-        return json.load(f)
-
-def get_all_signals() -> List[Dict]:
-    """Get all signals from database."""
-    return load_signals()
-
-def LoadSignals() -> List[Dict]:
-    """Alternative function to load signals (PascalCase)."""
-    settings = get_settings()
-    with open(settings.data_path, 'r') as f:
-        data = json.load(f)
-    return data
-
-def fetch_signals() -> List[Dict]:
-    """Yet another way to fetch signals."""
-    return load_signals()
+    try:
+        with open(settings.signals_path, "r") as f:
+            data = json.load(f)
+            return [_normalize_signal(item) for item in data]
+    except FileNotFoundError as exc:
+        raise RuntimeError(f"Signals file not found: {settings.signals_path}") from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"Invalid JSON in signals file: {settings.signals_path}"
+        ) from exc
